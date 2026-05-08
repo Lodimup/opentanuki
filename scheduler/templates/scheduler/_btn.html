@@ -1,0 +1,14 @@
+{% comment %}
+Generic button partial. Args:
+  label    - text content (required)
+  icon     - lucide icon name (optional)
+  variant  - "primary" or "" (default plain)
+  size     - "sm" | "lg" | "" (default)
+  type     - "submit" | "button" | "link" (default "button")
+  href     - url, used when type="link"
+  title    - tooltip
+  disabled - bool
+  extra    - extra css classes
+  attrs    - raw extra html attrs (rendered with |safe)
+{% endcomment %}
+{% if type == "link" %}<a href="{{ href }}" class="btn{% if variant %} btn-{{ variant }}{% endif %}{% if size %} btn-{{ size }}{% endif %}{% if extra %} {{ extra }}{% endif %}"{% if title %} title="{{ title }}"{% endif %}{% if attrs %} {{ attrs|safe }}{% endif %}>{% if icon %}<i data-lucide="{{ icon }}" class="icon"></i>{% endif %}{{ label|safe }}</a>{% else %}<button type="{{ type|default:'button' }}" class="btn{% if variant %} btn-{{ variant }}{% endif %}{% if size %} btn-{{ size }}{% endif %}{% if extra %} {{ extra }}{% endif %}"{% if title %} title="{{ title }}"{% endif %}{% if disabled %} disabled{% endif %}{% if attrs %} {{ attrs|safe }}{% endif %}>{% if icon %}<i data-lucide="{{ icon }}" class="icon"></i>{% endif %}{{ label|safe }}</button>{% endif %}

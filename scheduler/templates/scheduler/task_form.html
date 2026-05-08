@@ -1,0 +1,203 @@
+{% extends "scheduler/base.html" %}
+{% block title %}{% if task %}Edit{% else %}New{% endif %} Task — OpenTanuki{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <a href="{% if task %}{% url 'task_detail' task.pk %}{% else %}{% url 'dashboard' %}{% endif %}" class="lnk text-sm inline-flex items-center gap-1"><i data-lucide="arrow-left" class="icon-sm"></i>{% if task %}{{ task.name }}{% else %}dashboard{% endif %}</a>
+    <h1 class="font-black text-4xl uppercase tracking-tighter mt-1 mb-6 pb-3" style="border-bottom: 2px solid var(--line);">{% if task %}Edit task{% else %}New task{% endif %}</h1>
+
+    <form method="post" class="space-y-6 has-sticky-actions">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="card"><div class="card-body brut-inv font-black">{{ form.non_field_errors }}</div></div>
+        {% endif %}
+
+        {% include "scheduler/_card_start.html" with title="Basics" icon="file-text" %}
+            <div class="space-y-4">
+                <div>
+                    {% include "scheduler/_label.html" with text="Name" tt="Display name shown in dashboard + run logs. No effect on claude args." %}
+                    {{ form.name }}
+                    {% if form.name.errors %}<div class="font-black text-xs mt-1 inline-flex items-center gap-1"><i data-lucide="alert-triangle" class="icon-sm"></i>{{ form.name.errors.0 }}</div>{% endif %}
+                </div>
+                <div>
+                    {% include "scheduler/_label.html" with text="Prompt" tt="Positional prompt passed verbatim to claude -p. Multi-line OK. This is what Claude will execute on each run." %}
+                    {{ form.prompt }}
+                    {% if form.prompt.errors %}<div class="font-black text-xs mt-1 inline-flex items-center gap-1"><i data-lucide="alert-triangle" class="icon-sm"></i>{{ form.prompt.errors.0 }}</div>{% endif %}
+                </div>
+                <div>
+                    {% include "scheduler/_label.html" with text="Working directory" tt="Absolute path. Claude runs with this as cwd. Tools (Bash, Read, Edit) operate relative to here. Use --add-dir below for extra read/write paths." %}
+                    <div class="flex gap-2">
+                        {{ form.working_dir }}
+                        {% url 'dir_browse' as dir_url %}{% include "scheduler/_btn.html" with type="button" label="Browse" icon="folder-open" variant="secondary" extra="shrink-0" attrs='hx-get="'|add:dir_url|add:'" hx-target="#dir-modal-body" hx-vals="js:{path: document.getElementById(&#39;id_working_dir&#39;).value || &#39;&#39;}" onclick="document.getElementById(&#39;dir-modal&#39;).classList.remove(&#39;hidden&#39;)"' %}
+                    </div>
+                    {% if form.working_dir.errors %}<div class="font-black text-xs mt-1 inline-flex items-center gap-1"><i data-lucide="alert-triangle" class="icon-sm"></i>{{ form.working_dir.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+        {% include "scheduler/_card_end.html" %}
+
+        {% include "scheduler/_card_start.html" with title="Claude args" icon="settings-2" inv=True %}
+            <div class="space-y-4">
+                <div>
+                    {% include "scheduler/_label.html" with text="--model" tt="Alias maps to latest in family. sonnet (recommended balance), haiku (fastest, cheapest), opus (smartest, slowest)." %}
+                    {{ form.model }}
+                </div>
+                <label class="flex items-center gap-2 font-bold text-sm">
+                    {{ form.dangerously_skip_permissions }} <span class="font-mono text-xs">--dangerously-skip-permissions</span>
+                    {% include "scheduler/_tt.html" with text="Skip ALL permission prompts. Required for headless scheduling. Only use in trusted dirs / sandbox — claude can run any command." %}
+                </label>
+
+                <details class="advanced-config">
+                    <summary>Advanced config</summary>
+                    <div class="adv-body space-y-4">
+                        <div>
+                            {% include "scheduler/_label.html" with text="--permission-mode" tt="default = ask before risky ops. auto = auto-decide low-risk. acceptEdits = no prompt for file writes. plan = plan only, no execution. bypassPermissions = no prompts (sandbox only). dontAsk = silent allow." %}
+                            {{ form.permission_mode }}
+                        </div>
+                        <div>
+                            {% include "scheduler/_label.html" with text="--allowedTools" tt="Space-separated whitelist. e.g. 'Bash(git *) Edit Read'. Restrict claude to these tools only. Empty = allow all default tools." %}
+                            {{ form.allowed_tools }}
+                        </div>
+                        <div>
+                            {% include "scheduler/_label.html" with text="--disallowedTools" tt="Space-separated denylist. e.g. 'WebFetch Bash(rm *)'. Block these even if otherwise allowed." %}
+                            {{ form.disallowed_tools }}
+                        </div>
+                        <div>
+                            {% include "scheduler/_label.html" with text="--add-dir" tt="Extra absolute paths claude can read/write besides working dir. One per line. e.g. /Users/me/Projects/shared-lib" %}
+                            {{ form.add_dirs }}
+                        </div>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                {% include "scheduler/_label.html" with text="--output-format" tt="stream-json = live token-by-token UI updates (recommended). text = plain final output. json = single structured result on completion." %}
+                                {{ form.output_format }}
+                            </div>
+                            <div>
+                                {% include "scheduler/_label.html" with text="--max-budget-usd" tt="Hard cap on dollars spent for this run. Aborts mid-stream when reached. Empty = no cap. e.g. 5.00" %}
+                                {{ form.max_budget_usd }}
+                            </div>
+                        </div>
+                        <label class="flex items-center gap-2 font-bold text-sm">
+                            {{ form.verbose }} <span class="font-mono text-xs">--verbose</span>
+                            {% include "scheduler/_tt.html" with text="Extra debug info. Auto-enabled by stream-json output format." %}
+                        </label>
+                        <div>
+                            {% include "scheduler/_label.html" with text="Extra args" tt="Raw passthrough to claude CLI. One arg per line: '--effort' on one line, 'high' on next. For args with spaces use quoting." %}
+                            {{ form.extra_args }}
+                        </div>
+                    </div>
+                </details>
+            </div>
+        {% include "scheduler/_card_end.html" %}
+
+        {% include "scheduler/_card_start.html" with title="Schedule" icon="calendar-clock" %}
+            <div class="space-y-4">
+                <div class="grid sm:grid-cols-3 gap-4">
+                    <div>
+                        {% include "scheduler/_label.html" with text="Type" tt="Manual = only run when ▶ Run clicked. Interval = run every N seconds. Cron = run on cron schedule (UTC)." %}
+                        {{ form.schedule_type }}
+                    </div>
+                    <div>
+                        {% include "scheduler/_label.html" with text="Interval (s)" tt="Fire every N seconds. e.g. 3600 = hourly, 86400 = daily. Required when type = interval." %}
+                        {{ form.interval_seconds }}
+                        {% if form.interval_seconds.errors %}<div class="font-black text-xs mt-1 inline-flex items-center gap-1"><i data-lucide="alert-triangle" class="icon-sm"></i>{{ form.interval_seconds.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div>
+                        {% include "scheduler/_label.html" with text="Cron" tt="5 fields: minute hour day-of-month month day-of-week. e.g. '0 9 * * *' = 09:00 daily. '*/15 * * * *' = every 15 min. Entered in your local timezone; stored as UTC in DB." %}
+                        {{ form.cron_expr }}
+                        <div class="font-mono text-[10px] text-mute mt-1" id="cron-tz-label">local time</div>
+                        {% if form.cron_expr.errors %}<div class="font-black text-xs mt-1 inline-flex items-center gap-1"><i data-lucide="alert-triangle" class="icon-sm"></i>{{ form.cron_expr.errors.0 }}</div>{% endif %}
+                    </div>
+                </div>
+                <label class="flex items-center gap-2 font-bold text-sm">
+                    {{ form.enabled }} Enabled
+                    {% include "scheduler/_tt.html" with text="Toggle to pause scheduled runs without deleting task. Manual triggers still work when enabled. Disabled = beat skips, manual still allowed." %}
+                </label>
+            </div>
+        {% include "scheduler/_card_end.html" %}
+
+        <div class="form-actions">
+            {% include "scheduler/_btn.html" with type="button" label="Cancel" icon="x" variant="secondary" extra="form-actions-secondary" attrs='onclick="document.getElementById(&#39;cancel-dialog&#39;).showModal()"' %}
+            {% if task %}
+            {% include "scheduler/_btn.html" with type="button" label="Delete" icon="trash-2" variant="destructive" attrs='onclick="document.getElementById(&#39;delete-dialog&#39;).showModal()"' %}
+            {% endif %}
+            {% if task %}{% include "scheduler/_btn.html" with type="submit" label="Save" icon="save" variant="primary" %}{% else %}{% include "scheduler/_btn.html" with type="submit" label="Create" icon="save" variant="primary" %}{% endif %}
+        </div>
+    </form>
+</div>
+
+<dialog id="cancel-dialog" class="brut-dialog">
+    <div class="card-head"><i data-lucide="alert-triangle" class="icon"></i>Discard changes?</div>
+    <div class="card-body space-y-4">
+        <p class="font-medium text-sm">
+            Unsaved edits will be lost. {% if task %}Return to task detail?{% else %}Return to dashboard?{% endif %}
+        </p>
+        <div class="flex gap-2 flex-wrap justify-end">
+            {% include "scheduler/_btn.html" with type="button" label="Keep editing" icon="arrow-left" variant="secondary" attrs='onclick="document.getElementById(&#39;cancel-dialog&#39;).close()"' %}
+            {% if task %}{% url 'task_detail' task.pk as discard_url %}{% else %}{% url 'dashboard' as discard_url %}{% endif %}
+            {% include "scheduler/_btn.html" with type="link" href=discard_url label="Discard" icon="x" variant="destructive" %}
+        </div>
+    </div>
+</dialog>
+
+{% if task %}
+<dialog id="delete-dialog" class="brut-dialog">
+    <div class="card-head card-head-inv"><i data-lucide="alert-triangle" class="icon"></i>Delete task?</div>
+    <div class="card-body space-y-4">
+        <p class="font-medium text-sm">
+            About to delete <strong class="font-black">{{ task.name }}</strong>.
+            Run history + logs preserved on disk; schedule entry removed. Cannot undo.
+        </p>
+        <form method="post" action="{% url 'task_delete' task.pk %}" class="flex gap-2 flex-wrap justify-end">
+            {% csrf_token %}
+            {% include "scheduler/_btn.html" with type="button" label="Cancel" icon="x" variant="secondary" attrs='onclick="document.getElementById(&#39;delete-dialog&#39;).close()"' %}
+            {% include "scheduler/_btn.html" with type="submit" label="Delete forever" icon="trash-2" variant="destructive" %}
+        </form>
+    </div>
+</dialog>
+{% endif %}
+
+<div id="dir-modal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0" style="background: rgba(42,42,42,0.55);" onclick="document.getElementById('dir-modal').classList.add('hidden')"></div>
+    <div class="absolute inset-x-4 top-12 max-w-2xl mx-auto card max-h-[80vh] overflow-y-auto">
+        <div class="card-head flex items-center justify-between">
+            <span class="inline-flex items-center gap-2"><i data-lucide="folder-open" class="icon"></i>Pick directory</span>
+            {% include "scheduler/_btn.html" with type="button" label="Close" icon="x" variant="secondary" size="sm" attrs='onclick="document.getElementById(&#39;dir-modal&#39;).classList.add(&#39;hidden&#39;)"' %}
+        </div>
+        <div class="card-body" id="dir-modal-body"></div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const cronInput = document.getElementById('id_cron_expr');
+    const tzLabel = document.getElementById('cron-tz-label');
+    if (!cronInput) return;
+
+    const offsetH = -new Date().getTimezoneOffset() / 60;
+    const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
+    if (tzLabel) tzLabel.textContent = `${tzName} (UTC${offsetH >= 0 ? '+' : ''}${offsetH})`;
+
+    function shift(expr, delta) {
+        const parts = (expr || '').trim().split(/\s+/);
+        if (parts.length !== 5) return expr;
+        const h = parts[1];
+        if (!/^[0-9,]+$/.test(h)) return expr;
+        parts[1] = h.split(',').map(x => {
+            const n = parseInt(x, 10);
+            if (Number.isNaN(n)) return x;
+            return ((n + delta) % 24 + 24) % 24;
+        }).join(',');
+        return parts.join(' ');
+    }
+
+    if ((cronInput.value || '').trim()) {
+        cronInput.value = shift(cronInput.value, offsetH);
+    }
+    cronInput.form.addEventListener('submit', () => {
+        if ((cronInput.value || '').trim()) {
+            cronInput.value = shift(cronInput.value, -offsetH);
+        }
+    });
+})();
+</script>
+{% endblock %}

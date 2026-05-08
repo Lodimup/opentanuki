@@ -1,0 +1,5 @@
+{% comment %}
+Form label. If tt provided, render as <details> accordion: click row → expand help.
+A subtle "?" indicator appears next to label text — click toggles (no lucide icon).
+Args: text (required), tt (optional), for_id (optional), extra_class (optional)
+{% endcomment %}{% if tt %}<details class="field-acc {{ extra_class|default:'' }}"><summary><span class="label-text">{{ text }}</span><i data-lucide="circle-help" class="icon-sm acc-mark acc-mark-closed"></i><i data-lucide="circle-x" class="icon-sm acc-mark acc-mark-open"></i></summary><div class="field-acc-body">{{ tt }}</div></details>{% else %}<label class="font-black text-xs uppercase tracking-wider mb-1 block {{ extra_class|default:'' }}"{% if for_id %} for="{{ for_id }}"{% endif %}>{{ text }}</label>{% endif %}

@@ -1,0 +1,10 @@
+{% for r in runs %}
+<tr style="border-top: 1px solid var(--line);">
+    <td class="px-4 py-2.5 font-mono text-xs text-mute">{{ r.created_at|date:"Y-m-d H:i:s" }}</td>
+    <td class="px-4 py-2.5">{% include "scheduler/_status_badge.html" with status=r.status %}</td>
+    <td class="px-4 py-2.5 font-mono text-xs text-mute">{{ r.trigger }}</td>
+    <td class="px-4 py-2.5 font-mono text-xs text-mute">{% if r.duration_seconds %}{{ r.duration_seconds|floatformat:1 }}s{% else %}—{% endif %}</td>
+    <td class="px-4 py-2.5 font-mono text-xs text-mute">{{ r.exit_code|default_if_none:"—" }}</td>
+    <td class="px-4 py-2.5 text-right"><a href="{% url 'run_detail' r.pk %}" class="lnk text-xs inline-flex items-center gap-1">view <i data-lucide="arrow-right" class="icon-sm"></i></a></td>
+</tr>
+{% endfor %}

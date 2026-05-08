@@ -1,0 +1,9 @@
+{% comment %}
+Card open. Pair with _card_end.html.
+Args (via {% include with ... %}):
+  title       — uppercase header text
+  icon        — lucide icon name (optional, e.g. "play")
+  inv         — truthy → inverted (dark) header
+  no_body     — truthy → skip default <div class="card-body"> wrapper (caller manages padding)
+  extra_class — extra classes on outer .card
+{% endcomment %}<div class="card {{ extra_class|default:'' }}">{% if title %}<div class="card-head{% if inv %} card-head-inv{% endif %}">{% if icon %}<i data-lucide="{{ icon }}" class="icon shrink-0"></i>{% endif %}<span class="card-head-text">{{ title }}</span></div>{% endif %}{% if not no_body %}<div class="card-body">{% endif %}

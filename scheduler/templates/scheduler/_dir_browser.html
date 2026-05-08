@@ -1,0 +1,24 @@
+{% load scheduler_extras %}
+<div>
+    <div class="flex items-center gap-2 mb-3 flex-wrap">
+        <code class="brut-flat px-2 py-1 font-mono text-xs break-all flex-1">{{ current }}</code>
+        <button type="button" class="btn btn-primary btn-sm"
+                onclick="document.getElementById('id_working_dir').value='{{ current|escapejs }}'; document.getElementById('dir-modal').classList.add('hidden')">
+            <i data-lucide="check" class="icon"></i>Use this dir
+        </button>
+    </div>
+    <div class="brut-flat divide-y-2 divide-black">
+        {% if parent %}
+        <button type="button" class="w-full text-left px-3 py-2 font-black uppercase tracking-wider text-xs hover:bg-black hover:text-white inline-flex items-center gap-2"
+                hx-get="{% url 'dir_browse' %}?path={{ parent|urlencode }}"
+                hx-target="#dir-modal-body"><i data-lucide="arrow-up" class="icon"></i>..</button>
+        {% endif %}
+        {% for entry in entries %}
+        <button type="button" class="w-full text-left px-3 py-2 font-mono text-sm hover:bg-black hover:text-white inline-flex items-center gap-2"
+                hx-get="{% url 'dir_browse' %}?path={{ entry|stringformat:'s'|urlencode }}"
+                hx-target="#dir-modal-body"><i data-lucide="folder" class="icon"></i>{{ entry.name }}</button>
+        {% empty %}
+        <div class="px-3 py-4 text-sm font-mono">(no subdirectories)</div>
+        {% endfor %}
+    </div>
+</div>

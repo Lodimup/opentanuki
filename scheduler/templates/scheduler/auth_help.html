@@ -1,0 +1,67 @@
+{% extends "scheduler/base.html" %}
+{% block title %}Re-authenticate Claude — OpenTanuki{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <a href="{% url 'dashboard' %}" class="lnk text-sm inline-flex items-center gap-1"><i data-lucide="arrow-left" class="icon-sm"></i>dashboard</a>
+    <h1 class="font-black text-4xl uppercase tracking-tighter mt-1 mb-6 pb-3" style="border-bottom: 2px solid var(--line);">Re-auth Claude</h1>
+
+    {% include "scheduler/_card_start.html" with title="Why this page?" icon="info" extra_class="mb-5" %}
+        <p class="text-sm font-medium leading-relaxed">
+            OpenTanuki shells out to <code class="font-mono">claude -p</code> as same OS user that runs celery worker. CLI keep OAuth token in
+            <code class="font-mono">~/.claude/</code> + macOS keychain. Token expire → run fail. Banner appear automatic. Pick option below.
+        </p>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="Option 1 — Interactive login (subscription)" icon="log-in" extra_class="mb-5" %}
+        <p class="text-sm font-medium mb-2">SSH or open Terminal on host. Run:</p>
+        <pre class="brut-inv-static p-3 font-mono text-sm overflow-x-auto" style="box-shadow: 3px 3px 0 0 var(--shadow);">claude /login</pre>
+        <p class="text-xs mt-2 font-mono text-mute">Browser opens. Token cached in keychain. No re-login until expire.</p>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="Option 2 — Long-lived token (subscription)" icon="key" extra_class="mb-5" %}
+        <pre class="brut-inv-static p-3 font-mono text-sm overflow-x-auto" style="box-shadow: 3px 3px 0 0 var(--shadow);">claude setup-token</pre>
+        <p class="text-xs mt-2 font-mono text-mute">Persistent token. Survive reboot. Best for headless.</p>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="Option 3 — Paste token in app (no terminal)" icon="key-round" extra_class="mb-5" %}
+        <p class="text-sm font-medium mb-2">Run <code class="font-mono">claude setup-token</code> on any machine, copy printed token, paste into <a href="{% url 'settings' %}" class="lnk">Settings</a>. Worker inject as <code class="font-mono">CLAUDE_CODE_OAUTH_TOKEN</code> env var on each run. Bypass keychain entirely.</p>
+        {% url 'settings' as settings_url %}{% include "scheduler/_btn.html" with type="link" href=settings_url label="Open Settings" icon="settings" variant="primary" extra="inline-flex" %}
+        <p class="text-xs mt-2 font-mono text-mute">Best for headless / ssh-only / docker.</p>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="Option 4 — Anthropic API key (env)" icon="terminal" extra_class="mb-5" %}
+        <p class="text-sm font-medium mb-2">Or paste API key in <a href="{% url 'settings' %}" class="lnk">Settings</a>, OR export before celery worker:</p>
+        <pre class="brut-inv-static p-3 font-mono text-sm overflow-x-auto" style="box-shadow: 3px 3px 0 0 var(--shadow);">export ANTHROPIC_API_KEY=sk-ant-…
+uv run celery -A app worker -l info</pre>
+        <p class="text-xs mt-2 font-mono text-mute">Pay-per-token. No subscription needed.</p>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="Where token lives" icon="folder-key" extra_class="mb-5" %}
+        <ul class="text-sm font-medium space-y-1.5 list-none">
+            <li class="flex gap-2"><i data-lucide="dot" class="icon shrink-0 mt-0.5"></i><span><code class="font-mono">~/.claude/</code> — metadata, settings.</span></li>
+            <li class="flex gap-2"><i data-lucide="dot" class="icon shrink-0 mt-0.5"></i><span>macOS keychain entry <code class="font-mono">Claude Code-credentials</code> (account = your email).</span></li>
+            <li class="flex gap-2"><i data-lucide="dot" class="icon shrink-0 mt-0.5"></i><span>CLI read both on every invocation. Zero config in OpenTanuki.</span></li>
+        </ul>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="Caveats" icon="alert-triangle" extra_class="mb-5" %}
+        <ul class="text-sm font-medium space-y-2 list-none">
+            <li class="flex gap-2"><i data-lucide="x" class="icon shrink-0 mt-0.5"></i><span><strong>Don't mix auth methods.</strong> If <code class="font-mono">ANTHROPIC_API_KEY</code> set after <code class="font-mono">setup-token</code>, CLI prefer env var. Confusing billing path. Pick one.</span></li>
+            <li class="flex gap-2"><i data-lucide="x" class="icon shrink-0 mt-0.5"></i><span><strong>Don't symlink <code class="font-mono">~/.claude/</code></strong>. Keychain index lock to original path. Move = re-auth.</span></li>
+            <li class="flex gap-2"><i data-lucide="alert-circle" class="icon shrink-0 mt-0.5"></i><span><strong>SSH-only sessions.</strong> If celery worker launch via ssh without GUI login, macOS keep keychain locked → CLI can't read token. Symptom: auth banner reappear after fresh boot.</span></li>
+            <li class="flex gap-2"><i data-lucide="alert-circle" class="icon shrink-0 mt-0.5"></i><span><strong>Reboot.</strong> After macOS reboot, keychain stay locked until you log in via GUI. Worker launched on boot via launchd may fail until first GUI login.</span></li>
+            <li class="flex gap-2"><i data-lucide="check" class="icon shrink-0 mt-0.5"></i><span><strong>Fix for headless/ssh.</strong> Either log in GUI once, OR unlock manually:
+                <pre class="brut-inv-static p-2 mt-1 font-mono text-xs overflow-x-auto" style="box-shadow: 3px 3px 0 0 var(--shadow);">security unlock-keychain ~/Library/Keychains/login.keychain-db</pre>
+                OR run worker via user-level launchd agent so it inherit logged-in session keychain.</span></li>
+            <li class="flex gap-2"><i data-lucide="check" class="icon shrink-0 mt-0.5"></i><span><strong>Verify token live.</strong>
+                <pre class="brut-inv-static p-2 mt-1 font-mono text-xs overflow-x-auto" style="box-shadow: 3px 3px 0 0 var(--shadow);">security find-generic-password -s "Claude Code-credentials" -w | head -c 20
+claude -p "say hi"</pre></span></li>
+        </ul>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="After re-auth" icon="check-circle" inv=True %}
+        <p class="text-sm font-medium">Trigger any task with <i data-lucide="play" class="icon-sm"></i> Run. Banner clear when next run succeed.</p>
+    {% include "scheduler/_card_end.html" %}
+</div>
+{% endblock %}

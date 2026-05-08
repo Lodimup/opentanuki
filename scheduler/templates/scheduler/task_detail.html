@@ -1,0 +1,157 @@
+{% extends "scheduler/base.html" %}
+{% load static %}
+{% block title %}{{ task.name }} — OpenTanuki{% endblock %}
+{% block extra_js %}
+<script type="module" src="{% static 'scheduler/js/task_detail.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto flex items-end justify-between mb-6 gap-3 flex-wrap pb-3" style="border-bottom: 2px solid var(--line);" data-task-id="{{ task.pk }}" data-running="{% if task.is_running %}1{% else %}0{% endif %}">
+    <div>
+        <a href="{% url 'dashboard' %}" class="lnk text-sm inline-flex items-center gap-1"><i data-lucide="arrow-left" class="icon-sm"></i>dashboard</a>
+        <h1 class="font-black text-4xl uppercase tracking-tighter mt-1">{{ task.name }}</h1>
+    </div>
+    {% url 'task_edit' task.pk as edit_url %}
+    <div class="flex gap-2 ml-auto">
+        {% include "scheduler/_btn.html" with type="link" href=edit_url label="Edit" icon="pencil" variant="secondary" %}
+        {% include "scheduler/_btn_run.html" with task=task idle_label="Run now" on_dashboard=False %}
+    </div>
+</div>
+
+<div class="max-w-3xl mx-auto space-y-6 mb-8">
+    {% include "scheduler/_card_start.html" with title="Basics" icon="file-text" %}
+        <div class="space-y-4">
+            <div>
+                <div class="font-black text-xs uppercase tracking-widest mb-1">Name</div>
+                <div class="text-sm font-bold break-words">{{ task.name }}</div>
+            </div>
+            <div>
+                <div class="font-black text-xs uppercase tracking-widest mb-1">Prompt</div>
+                <pre class="font-mono text-sm whitespace-pre-wrap break-words" style="background: var(--paper); padding: 0.75rem; border: 2px solid var(--line);">{{ task.prompt }}</pre>
+            </div>
+            <div>
+                <div class="font-black text-xs uppercase tracking-widest mb-1">Working directory</div>
+                <div class="font-mono text-xs break-all">{{ task.working_dir }}</div>
+            </div>
+        </div>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="Claude args" icon="settings-2" inv=True %}
+        <div class="space-y-4">
+            <div>
+                <div class="font-black text-xs uppercase tracking-widest mb-1">--model</div>
+                <div class="font-mono text-xs">{{ task.model|default:"(default)" }}</div>
+            </div>
+            <div class="font-mono text-xs">
+                <span class="font-black">--dangerously-skip-permissions:</span> {% if task.dangerously_skip_permissions %}ON{% else %}off{% endif %}
+            </div>
+            <details class="advanced-config">
+                <summary>Advanced config</summary>
+                <div class="adv-body space-y-3 text-xs font-mono">
+                    <div><span class="font-black">--permission-mode:</span> {{ task.permission_mode|default:"—" }}</div>
+                    <div><span class="font-black">--allowedTools:</span> {{ task.allowed_tools|default:"—" }}</div>
+                    <div><span class="font-black">--disallowedTools:</span> {{ task.disallowed_tools|default:"—" }}</div>
+                    <div>
+                        <div class="font-black">--add-dir:</div>
+                        {% if task.add_dirs %}<pre class="whitespace-pre-wrap break-all mt-0.5">{{ task.add_dirs }}</pre>{% else %}—{% endif %}
+                    </div>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div><span class="font-black">--output-format:</span> {{ task.output_format|default:"—" }}</div>
+                        <div><span class="font-black">--max-budget-usd:</span> {{ task.max_budget_usd|default:"—" }}</div>
+                    </div>
+                    <div><span class="font-black">--verbose:</span> {% if task.verbose %}ON{% else %}off{% endif %}</div>
+                    <div>
+                        <div class="font-black">Extra args:</div>
+                        {% if task.extra_args %}<pre class="whitespace-pre-wrap break-all mt-0.5">{{ task.extra_args }}</pre>{% else %}—{% endif %}
+                    </div>
+                </div>
+            </details>
+        </div>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="Schedule" icon="calendar-clock" %}
+        <div class="space-y-3 text-sm font-mono">
+            <div class="grid sm:grid-cols-3 gap-3">
+                <div>
+                    <div class="font-black text-xs uppercase tracking-widest mb-1">Type</div>
+                    <div>{{ task.get_schedule_type_display }}</div>
+                </div>
+                <div>
+                    <div class="font-black text-xs uppercase tracking-widest mb-1">Interval (s)</div>
+                    <div>{% if task.schedule_type == 'interval' %}{{ task.interval_seconds }}{% else %}—{% endif %}</div>
+                </div>
+                <div>
+                    <div class="font-black text-xs uppercase tracking-widest mb-1">Cron</div>
+                    {% if task.schedule_type == 'cron' %}
+                    <div data-cron-utc="{{ task.cron_expr }}" id="cron-display">{{ task.cron_expr }}</div>
+                    <div class="font-mono text-[10px] text-mute mt-0.5" id="cron-tz-label">local time</div>
+                    {% else %}
+                    <div>—</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-xs"><span class="font-black">Enabled:</span> {% if task.enabled %}YES{% else %}NO{% endif %}</div>
+        </div>
+    {% include "scheduler/_card_end.html" %}
+</div>
+
+<div class="max-w-3xl mx-auto">
+<h2 class="font-black text-3xl uppercase tracking-tighter mb-4 pb-3" style="border-bottom: 2px solid var(--line);">Run history</h2>
+<div id="task-runs-wrap" data-task-runs-url="/api/tasks/{{ task.pk }}/runs">
+<div id="task-runs-card"{% if not runs %} class="hidden"{% endif %}>
+{% include "scheduler/_card_start.html" with no_body=True %}
+<div class="overflow-x-auto">
+<table class="w-full text-sm table-fixed">
+    <colgroup>
+        <col style="width: 22%;">
+        <col style="width: 18%;">
+        <col style="width: 14%;">
+        <col style="width: 14%;">
+        <col style="width: 12%;">
+        <col style="width: 20%;">
+    </colgroup>
+    <thead style="background: var(--ink); color: var(--paper);">
+        <tr class="text-left">
+            <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">When</th>
+            <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Status</th>
+            <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Trigger</th>
+            <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Duration</th>
+            <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Exit</th>
+            <th class="px-4 py-2.5"></th>
+        </tr>
+    </thead>
+    <tbody id="task-runs-tbody">
+        {% include "scheduler/_task_runs_rows.html" %}
+    </tbody>
+</table>
+</div>
+{% include "scheduler/_card_end.html" with no_body=True %}
+</div>
+<p id="task-runs-empty" class="font-bold uppercase text-sm text-mute inline-flex items-center gap-1{% if runs %} hidden{% endif %}">No runs yet — click <i data-lucide="play" class="icon-sm"></i> Run now</p>
+</div>
+</div>
+<script>
+(function () {
+    const el = document.getElementById('cron-display');
+    const tzLabel = document.getElementById('cron-tz-label');
+    if (!el) return;
+    const utc = el.getAttribute('data-cron-utc') || '';
+    const offsetH = -new Date().getTimezoneOffset() / 60;
+    const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
+    if (tzLabel) tzLabel.textContent = `${tzName} (UTC${offsetH >= 0 ? '+' : ''}${offsetH})`;
+    function shift(expr, delta) {
+        const parts = (expr || '').trim().split(/\s+/);
+        if (parts.length !== 5) return expr;
+        const h = parts[1];
+        if (!/^[0-9,]+$/.test(h)) return expr;
+        parts[1] = h.split(',').map(x => {
+            const n = parseInt(x, 10);
+            if (Number.isNaN(n)) return x;
+            return ((n + delta) % 24 + 24) % 24;
+        }).join(',');
+        return parts.join(' ');
+    }
+    el.textContent = shift(utc, offsetH);
+})();
+</script>
+{% endblock %}

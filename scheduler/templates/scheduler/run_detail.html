@@ -1,0 +1,58 @@
+{% extends "scheduler/base.html" %}
+{% block title %}Run #{{ run.pk }} — OpenTanuki{% endblock %}
+
+{% block content %}
+<div class="flex items-end justify-between mb-6 gap-3 flex-wrap pb-3" style="border-bottom: 2px solid var(--line);">
+    <div>
+        <a href="{% url 'task_detail' run.task.pk %}" class="lnk text-sm inline-flex items-center gap-1"><i data-lucide="arrow-left" class="icon-sm"></i>{{ run.task.name }}</a>
+        <h1 class="font-black text-4xl uppercase tracking-tighter mt-1">Run #{{ run.pk }}</h1>
+    </div>
+    <div id="run-status" hx-get="{% url 'run_status' run.pk %}" hx-trigger="every 3s" hx-swap="outerHTML">
+        {% include "scheduler/_run_status.html" %}
+    </div>
+</div>
+
+{% if run.is_active %}<div id="running-stripe" class="running-stripe mb-3"></div>{% endif %}
+
+{% include "scheduler/_card_start.html" with title="argv" icon="square-terminal" extra_class="mb-4" %}
+    <pre class="font-mono text-xs whitespace-pre-wrap break-all" style="background: var(--paper); padding: 0.5rem; border: 2px solid var(--line);">{{ run.argv_json }}</pre>
+{% include "scheduler/_card_end.html" %}
+
+{% include "scheduler/_card_start.html" with title="Output" icon="terminal" inv=True no_body=True %}
+    <div class="brut-inv-static p-4 max-h-[60vh] overflow-y-auto"
+         style="box-shadow: none; border: none;"
+         hx-ext="sse"
+         sse-connect="{% url 'run_stream' run.pk %}"
+         sse-swap="log"
+         hx-swap="beforeend"
+         id="log-output">
+        <div class="log-stream"></div>
+    </div>
+{% include "scheduler/_card_end.html" with no_body=True %}
+
+<div class="mt-2 text-xs font-mono text-mute" hx-ext="sse" sse-connect="{% url 'run_stream' run.pk %}" sse-swap="done" hx-swap="innerHTML">
+    {% if not run.is_active %}exit={{ run.exit_code }} status={{ run.status }}{% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const out = document.getElementById('log-output');
+        const finish = () => {
+            const stripe = document.getElementById('running-stripe');
+            if (stripe) stripe.remove();
+            document.querySelectorAll('.blink').forEach(el => el.classList.remove('blink'));
+            const statusEl = document.getElementById('run-status');
+            if (statusEl) statusEl.removeAttribute('hx-trigger');
+            if (window.htmx && statusEl) htmx.ajax('GET', statusEl.getAttribute('hx-get') || `{% url 'run_status' run.pk %}`, { target: '#run-status', swap: 'outerHTML' });
+        };
+        document.body.addEventListener('htmx:sseMessage', (e) => {
+            if (out) out.scrollTop = out.scrollHeight;
+            if (e.detail && e.detail.type === 'done') finish();
+        });
+        document.body.addEventListener('htmx:sseClose', finish);
+        if (out) setInterval(() => { out.scrollTop = out.scrollHeight; }, 1000);
+    })();
+</script>
+{% endblock %}

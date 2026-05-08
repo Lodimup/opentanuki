@@ -1,0 +1,6 @@
+<form method="post" action="{% url 'task_favorite' t.pk %}" hx-post="{% url 'task_favorite' t.pk %}" hx-target="#task-grid" hx-swap="innerHTML" hx-include="[name='q']" class="shrink-0 inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-secondary btn-sm{% if t.is_favorite %} fav-on{% endif %}" title="{% if t.is_favorite %}Unfavorite{% else %}Favorite{% endif %}" aria-pressed="{% if t.is_favorite %}true{% else %}false{% endif %}">
+        <i data-lucide="star" class="icon" {% if t.is_favorite %}fill="currentColor"{% else %}fill="none"{% endif %}></i>
+    </button>
+</form>

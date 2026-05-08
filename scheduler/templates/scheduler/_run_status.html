@@ -1,0 +1,8 @@
+<div id="run-status"
+     {% if run.is_active %}hx-get="{% url 'run_status' run.pk %}" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}
+     class="flex items-center gap-2 text-sm flex-wrap">
+    {% include "scheduler/_status_badge.html" with status=run.status %}
+    <span class="font-mono text-xs">trigger={{ run.trigger }}</span>
+    {% if run.duration_seconds %}<span class="font-mono text-xs">{{ run.duration_seconds|floatformat:1 }}s</span>{% endif %}
+    {% if run.exit_code is not None %}<span class="font-mono text-xs">exit={{ run.exit_code }}</span>{% endif %}
+</div>

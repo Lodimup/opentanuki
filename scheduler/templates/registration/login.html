@@ -1,0 +1,30 @@
+{% extends "scheduler/base.html" %}
+{% block title %}Login — OpenTanuki{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-12">
+    <div class="card brut-lg">
+        <div class="card-head card-head-inv">
+            <span class="font-mono" style="letter-spacing: 0;" aria-hidden="true">ʕ●━●ʔ</span>
+            OpenTanuki
+        </div>
+        <div class="card-body">
+            <p class="font-bold uppercase tracking-wider text-xs mb-6 text-mute">Sign in to schedule Claude tasks</p>
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                {% if form.errors %}
+                <div class="brut-inv-static p-3 font-black text-sm inline-flex items-center gap-2"><i data-lucide="alert-triangle" class="icon"></i>Invalid credentials</div>
+                {% endif %}
+                <div>
+                    <label class="font-black text-xs uppercase tracking-wider block mb-1">Username</label>
+                    <input type="text" name="username" autofocus class="brut-input" required>
+                </div>
+                <div>
+                    <label class="font-black text-xs uppercase tracking-wider block mb-1">Password</label>
+                    <input type="password" name="password" class="brut-input" required>
+                </div>
+                {% include "scheduler/_btn.html" with type="submit" label="Sign in" icon="log-in" variant="primary" size="lg" extra="w-full justify-center mt-2" %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

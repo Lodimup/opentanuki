@@ -1,0 +1,83 @@
+{% extends "scheduler/base.html" %}
+{% block title %}Settings — OpenTanuki{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <a href="{% url 'dashboard' %}" class="lnk text-sm inline-flex items-center gap-1"><i data-lucide="arrow-left" class="icon-sm"></i>dashboard</a>
+    <h1 class="font-black text-4xl uppercase tracking-tighter mt-1 mb-6 pb-3" style="border-bottom: 2px solid var(--line);">Settings</h1>
+
+    {% include "scheduler/_card_start.html" with title="Why secrets here?" icon="info" extra_class="mb-5" %}
+        <p class="text-sm font-medium leading-relaxed">
+            Worker process inject these as env vars before <code class="font-mono">claude -p</code>. Use this when keychain not available (ssh-only session, headless, docker). Stored in local sqlite. <strong>Plain text</strong> — protect host.
+        </p>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="CLAUDE_CODE_OAUTH_TOKEN" icon="key" extra_class="mb-5" %}
+        <p class="text-sm font-medium mb-3 inline-flex items-start gap-1.5">Long-lived OAuth token from <code class="font-mono">claude setup-token</code>. Bypass keychain. {% include "scheduler/_tt.html" with text="Token format: sk-ant-oat01-… Length ~108 chars. Use subscription quota (Pro/Max/Team). Token is stored plaintext in sqlite — protect host." %}</p>
+        {% if is_set.claude_code_oauth_token %}
+        <div class="brut-flat p-3 mb-3 inline-flex items-center gap-2 font-mono text-xs">
+            <i data-lucide="check-circle" class="icon"></i>
+            <span>Set: <strong>{{ masked.claude_code_oauth_token }}</strong></span>
+        </div>
+        {% else %}
+        <div class="brut-flat p-3 mb-3 inline-flex items-center gap-2 font-mono text-xs">
+            <i data-lucide="circle" class="icon"></i>
+            <span>Not set — using keychain / browser auth.</span>
+        </div>
+        {% endif %}
+        <form method="post" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="key" value="claude_code_oauth_token">
+            <input type="password" name="value" autocomplete="off" placeholder="paste token (e.g. starts with sk-ant-oat-…)" class="brut-input font-mono">
+            <div class="flex flex-wrap gap-2">
+                {% include "scheduler/_btn.html" with type="submit" label="Save" icon="save" variant="primary" attrs='name="action" value="save"' %}
+                {% if is_set.claude_code_oauth_token %}
+                {% include "scheduler/_btn.html" with type="submit" label="Clear" icon="trash-2" variant="destructive" attrs='name="action" value="clear" onclick="return confirm(&#39;Clear stored token?&#39;)"' %}
+                {% endif %}
+            </div>
+        </form>
+        <details class="mt-4">
+            <summary class="font-black text-xs uppercase tracking-wider cursor-pointer">How to get token</summary>
+            <pre class="brut-inv-static p-3 mt-2 font-mono text-xs overflow-x-auto" style="box-shadow: 3px 3px 0 0 var(--shadow);">claude setup-token
+# follow browser flow, copy printed token</pre>
+        </details>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="ANTHROPIC_API_KEY" icon="key-round" extra_class="mb-5" %}
+        <p class="text-sm font-medium mb-3 inline-flex items-start gap-1.5">Anthropic Console API key. Pay-per-token. {% include "scheduler/_tt.html" with text="Format: sk-ant-…. From console.anthropic.com. Charges Console balance per token. No subscription needed. Ignored if OAuth token also set." %}</p>
+        {% if is_set.anthropic_api_key %}
+        <div class="brut-flat p-3 mb-3 inline-flex items-center gap-2 font-mono text-xs">
+            <i data-lucide="check-circle" class="icon"></i>
+            <span>Set: <strong>{{ masked.anthropic_api_key }}</strong></span>
+        </div>
+        {% else %}
+        <div class="brut-flat p-3 mb-3 inline-flex items-center gap-2 font-mono text-xs">
+            <i data-lucide="circle" class="icon"></i>
+            <span>Not set.</span>
+        </div>
+        {% endif %}
+        <form method="post" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="key" value="anthropic_api_key">
+            <input type="password" name="value" autocomplete="off" placeholder="sk-ant-…" class="brut-input font-mono">
+            <div class="flex flex-wrap gap-2">
+                {% include "scheduler/_btn.html" with type="submit" label="Save" icon="save" variant="primary" attrs='name="action" value="save"' %}
+                {% if is_set.anthropic_api_key %}
+                {% include "scheduler/_btn.html" with type="submit" label="Clear" icon="trash-2" variant="destructive" attrs='name="action" value="clear" onclick="return confirm(&#39;Clear stored key?&#39;)"' %}
+                {% endif %}
+            </div>
+        </form>
+    {% include "scheduler/_card_end.html" %}
+
+    {% include "scheduler/_card_start.html" with title="Precedence" icon="list-ordered" inv=True %}
+        <p class="text-sm font-medium mb-2">Worker apply this order (first wins):</p>
+        <ol class="text-sm font-medium space-y-1 list-decimal list-inside">
+            <li><code class="font-mono">CLAUDE_CODE_OAUTH_TOKEN</code> (set above) — subscription quota</li>
+            <li><code class="font-mono">ANTHROPIC_API_KEY</code> (set above) — Console pay-per-token</li>
+            <li>Shell env at celery start time (either var)</li>
+            <li>macOS keychain (OAuth only — <code class="font-mono">setup-token</code> / <code class="font-mono">/login</code>)</li>
+        </ol>
+        <p class="text-xs font-medium mt-3 opacity-80">Pay-per-token via Console: set <code class="font-mono">ANTHROPIC_API_KEY</code> only. OAuth/keychain unused.</p>
+    {% include "scheduler/_card_end.html" %}
+</div>
+{% endblock %}

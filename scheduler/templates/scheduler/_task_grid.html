@@ -1,0 +1,23 @@
+{% if favorites %}
+<div class="grid md:grid-cols-2 gap-6 mb-6">
+    {% for t in favorites %}
+    {% include "scheduler/_task_card.html" with t=t %}
+    {% endfor %}
+</div>
+{% endif %}
+{% if others %}
+<div class="grid md:grid-cols-2 gap-6">
+    {% for t in others %}
+    {% include "scheduler/_task_card.html" with t=t %}
+    {% endfor %}
+</div>
+{% endif %}
+{% if not favorites and not others %}
+<div class="card">
+    <div class="card-body text-center py-10">
+        <div class="mb-4 inline-grid place-items-center w-16 h-16 brut-flat"><i data-lucide="search-x" style="width:2rem;height:2rem"></i></div>
+        <p class="font-black uppercase tracking-tight mb-1">No matches</p>
+        {% if q %}<p class="text-mute text-sm font-mono">no task contains "{{ q }}"</p>{% else %}{% url 'task_new' as new_url %}{% include "scheduler/_btn.html" with type="link" href=new_url label="Create first task" icon="plus" variant="primary" size="lg" extra="mt-3" %}{% endif %}
+    </div>
+</div>
+{% endif %}

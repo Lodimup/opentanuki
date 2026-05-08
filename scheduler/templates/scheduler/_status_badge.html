@@ -1,0 +1,6 @@
+{% if status == 'success' %}<span class="badge inline-flex items-center gap-1"><i data-lucide="check" class="icon-sm"></i>success</span>
+{% elif status == 'failed' %}<span class="badge badge-inv inline-flex items-center gap-1"><i data-lucide="x" class="icon-sm"></i>failed</span>
+{% elif status == 'running' %}<span class="badge badge-stripe blink inline-flex items-center gap-1"><i data-lucide="play" class="icon-sm"></i>running</span>
+{% elif status == 'pending' %}<span class="badge inline-flex items-center gap-1"><i data-lucide="clock" class="icon-sm"></i>pending</span>
+{% elif status == 'canceled' %}<span class="badge inline-flex items-center gap-1"><i data-lucide="ban" class="icon-sm"></i>canceled</span>
+{% else %}<span class="badge">{{ status }}</span>{% endif %}

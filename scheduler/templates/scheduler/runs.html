@@ -1,0 +1,46 @@
+{% extends "scheduler/base.html" %}
+{% block title %}Runs — OpenTanuki{% endblock %}
+{% block content %}
+<section>
+    <a href="{% url 'dashboard' %}" class="lnk text-sm inline-flex items-center gap-1"><i data-lucide="arrow-left" class="icon-sm"></i>dashboard</a>
+    <h1 class="font-black text-4xl uppercase tracking-tighter mt-1 mb-6 pb-3" style="border-bottom: 2px solid var(--line);">Runs</h1>
+
+    {% if recent %}
+    {% include "scheduler/_card_start.html" with no_body=True %}
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead style="background: var(--ink); color: var(--paper);">
+                <tr class="text-left">
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Task</th>
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Status</th>
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Trigger</th>
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Started</th>
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Duration</th>
+                    <th class="px-4 py-2.5"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% include "scheduler/_recent_runs_rows.html" %}
+            </tbody>
+        </table>
+        </div>
+    {% include "scheduler/_card_end.html" with no_body=True %}
+    {% else %}
+    <p class="font-bold uppercase text-sm text-mute">No runs yet.</p>
+    {% endif %}
+
+    {% if page.has_other_pages %}
+    <div class="flex items-center justify-between mt-4 gap-3 flex-wrap">
+        <span class="text-xs font-mono text-mute">Page {{ page.number }} of {{ page.paginator.num_pages }} · {{ page.paginator.count }} total</span>
+        <div class="flex gap-2">
+            {% if page.has_previous %}
+            {% url 'runs_list' as runs_url %}{% include "scheduler/_btn.html" with type="link" href=runs_url|add:'?page='|add:page.previous_page_number|stringformat:'s' label="Prev" icon="arrow-left" variant="secondary" size="sm" %}
+            {% endif %}
+            {% if page.has_next %}
+            {% url 'runs_list' as runs_url %}{% include "scheduler/_btn.html" with type="link" href=runs_url|add:'?page='|add:page.next_page_number|stringformat:'s' label="Next" icon="arrow-right" variant="secondary" size="sm" %}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

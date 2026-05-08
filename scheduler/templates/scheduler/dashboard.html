@@ -1,0 +1,57 @@
+{% extends "scheduler/base.html" %}
+{% load static %}
+{% block title %}Dashboard — OpenTanuki{% endblock %}
+{% block extra_js %}
+<script type="module" src="{% static 'scheduler/js/dashboard.js' %}"></script>
+{% endblock %}
+{% block content %}
+<section class="mb-12">
+    <div class="flex items-end justify-between mb-6 pb-3 gap-3 flex-wrap" style="border-bottom: 2px solid var(--line);">
+        <h1 class="font-black text-4xl uppercase tracking-tighter">Tasks</h1>
+        {% url 'task_new' as new_url %}{% include "scheduler/_btn.html" with type="link" href=new_url label="New Task" icon="plus" variant="primary" %}
+    </div>
+
+    <div class="mb-5">
+        <div class="relative">
+            <i data-lucide="search" class="icon-sm absolute" style="left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--mute);"></i>
+            <input type="search" name="q" value="{{ q }}" placeholder="Search name / prompt / dir…" autocomplete="off"
+                   class="brut-input" style="padding-left: 2.2rem;"
+                   hx-get="{% url 'dashboard' %}" hx-trigger="keyup changed delay:200ms, search" hx-target="#task-grid" hx-swap="innerHTML" hx-push-url="true">
+        </div>
+    </div>
+
+    <div id="task-grid">
+        {% include "scheduler/_task_grid.html" %}
+    </div>
+</section>
+
+<section>
+    <div class="flex items-end justify-between mb-4 pb-3 gap-3 flex-wrap" style="border-bottom: 2px solid var(--line);">
+        <h2 class="font-black text-3xl uppercase tracking-tighter">Recent runs</h2>
+        {% url 'runs_list' as runs_url %}{% include "scheduler/_btn.html" with type="link" href=runs_url label="View all" icon="arrow-right" variant="secondary" %}
+    </div>
+    {% if recent %}
+    {% include "scheduler/_card_start.html" with no_body=True %}
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead style="background: var(--ink); color: var(--paper);">
+                <tr class="text-left">
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Task</th>
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Status</th>
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Trigger</th>
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Started</th>
+                    <th class="px-4 py-2.5 font-black uppercase text-xs tracking-wider">Duration</th>
+                    <th class="px-4 py-2.5"></th>
+                </tr>
+            </thead>
+            <tbody id="recent-runs-tbody">
+                {% include "scheduler/_recent_runs_rows.html" %}
+            </tbody>
+        </table>
+        </div>
+    {% include "scheduler/_card_end.html" with no_body=True %}
+    {% else %}
+    <p class="font-bold uppercase text-sm text-mute" id="recent-runs-empty">No runs yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

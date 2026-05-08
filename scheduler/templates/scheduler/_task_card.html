@@ -1,0 +1,24 @@
+<div class="card task-card relative" data-task-id="{{ t.pk }}" data-running="{% if t.is_running %}1{% else %}0{% endif %}">
+    <a href="{% url 'task_detail' t.pk %}" class="task-card-link" aria-label="Open {{ t.name }}"></a>
+    <div class="card-body">
+        <div class="flex items-start gap-2 flex-wrap">
+            <div class="task-card-actions shrink-0">
+                {% include "scheduler/_favorite_btn.html" with t=t %}
+            </div>
+            <span class="font-black text-base sm:text-lg uppercase tracking-tight min-w-0 flex-1 break-words" style="word-break: break-word;">{{ t.name }}</span>
+            <div class="task-card-actions shrink-0">
+                {% include "scheduler/_btn_run.html" with task=t size="sm" on_dashboard=True %}
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-2">
+            <span class="badge {% if t.schedule_type != 'manual' %}badge-inv{% endif %}">{{ t.get_schedule_type_display }}</span>
+            {% if t.schedule_type == 'interval' %}
+            <span class="font-mono text-xs text-mute">every {{ t.interval_seconds }}s</span>
+            {% elif t.schedule_type == 'cron' %}
+            <span class="font-mono text-xs text-mute" data-cron-utc="{{ t.cron_expr }}">{{ t.cron_expr }}</span>
+            {% endif %}
+            {% if not t.enabled %}<span class="badge">disabled</span>{% endif %}
+        </div>
+        <div class="font-mono text-[10px] sm:text-xs text-mute mt-2 truncate" title="{{ t.working_dir }}">{{ t.working_dir }}</div>
+    </div>
+</div>

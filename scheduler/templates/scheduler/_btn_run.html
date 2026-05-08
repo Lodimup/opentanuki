@@ -1,0 +1,17 @@
+{% comment %}
+Run button (two-state idle/running) for task triggering. Args:
+  task        - Task instance with .pk and .is_running
+  size        - "sm" | "lg" | "" (default)
+  on_dashboard - bool, when true posts via htmx and starts polling
+                 when false (e.g. task detail), redirects to run on success
+{% endcomment %}
+{% if on_dashboard %}
+<form hx-post="/api/tasks/{{ task.pk }}/trigger" hx-swap="none" hx-disabled-elt="find button" hx-on::after-request="window.tanuki && window.tanuki.start()" class="shrink-0">
+{% else %}
+<form hx-post="/api/tasks/{{ task.pk }}/trigger" hx-swap="none" hx-on::after-request="if(event.detail.successful){const r=JSON.parse(event.detail.xhr.responseText);window.location='/runs/'+r.run_id+'/';}">
+{% endif %}
+    <button type="submit" class="btn btn-primary{% if size %} btn-{{ size }}{% endif %} run-btn" title="Run now"{% if task.is_running %} disabled{% endif %}>
+        <span class="run-btn-idle"><i data-lucide="play" class="icon"></i>{{ idle_label|default:"Run" }}</span>
+        <span class="run-btn-running"><i data-lucide="loader" class="icon blink"></i>Running</span>
+    </button>
+</form>
