@@ -2,6 +2,10 @@
 
 Self-hosted scheduler for `claude -p`. Run Claude Code on cron, interval, or manual triggers. Live-stream output via SSE. Per-user task isolation. SQLite + Redis. Neobrutalism UI.
 
+Each run starts inside a working directory you choose, so it inherits the full Claude Code surface area for that project — `CLAUDE.md`, `.claude/skills/`, `.claude/agents/`, `.claude/settings.json`, MCP servers, hooks, and slash commands all apply automatically. Stage the workdir like you would for an interactive Claude Code session and the scheduled run gets the same capabilities.
+
+OpenTanuki will grow to be your personal assistant, but for now a scheduler :)
+
 ![Dashboard](docs/screenshots/dashboard.png)
 
 ## Stack
@@ -43,6 +47,23 @@ Open http://127.0.0.1:8888
 | manual | "Check git status of project. Print uncommitted file count + diverged commit count vs origin." | Pre-deploy gate |
 
 Each task runs `claude -p <prompt>` in its own working directory with full CLI flag coverage (`--model`, `--permission-mode`, `--allowedTools`, `--add-dir`, `--max-budget-usd`, etc).
+
+### About `say`
+
+`say` is the macOS built-in text-to-speech command (`/usr/bin/say`). Claude can shell out to it to read summaries aloud — handy for ambient briefings while you're not at the keyboard. No setup, no API keys, runs offline. Default voices are robotic.
+
+**Recommended: enable Siri voices.** System Settings → Accessibility → Spoken Content → System Voice → Manage Voices, then download "Siri Voice 1" / "Siri Voice 2" / etc. set as default - far more natural than the legacy voices.
+
+```bash
+say "morning briefing ready"                # list installed voices
+```
+
+For higher-quality or cross-platform speech, swap `say` for one of these in your prompts:
+
+- **[Kokoro TTS](https://github.com/hexgrad/kokoro)** — 82M-param open-weights neural TTS. Local, fast (CPU-viable), surprisingly natural. Run via `pip install kokoro` then call from a tiny wrapper script. Best when you want fully offline + free.
+- **[Qwen TTS (local)](https://qwen.ai/blog?id=qwen3tts-0115)** — run Qwen2.5-Omni locally (3B or 7B) for expressive multilingual TTS without sending audio to a vendor. Strong prosody, supports Chinese + English + Japanese + Korean. Heavier than Kokoro but worth it for non-English or longer-form narration. Best when you want broadcast-grade voice on your own hardware.
+
+In a task prompt: `... write summary to /tmp/brief.txt, then run \`./speak.sh /tmp/brief.txt\`` — your `speak.sh` invokes whichever backend you prefer.
 
 ## Screens
 
