@@ -103,6 +103,16 @@ scheduler/
   tests.py                 # 94 tests, 88% coverage
 ```
 
+## Why no Dockerfile?
+
+OpenTanuki is meant to run on the host, not in a container. Each task spawns `claude -p` inside a working directory you choose, and Claude routinely needs the full power of the host OS to be useful — local binaries (`say`, `osascript`, `git`, `ffmpeg`, `uv`), system services (Mail, Calendar, Music), MCP servers that talk to the OS, GUI automations, GPU/Metal access, USB / Bluetooth peripherals, and so on. Stuffing all that into a container would either break those capabilities or require a tangle of bind mounts, host networking, and privileged flags that defeats the point.
+
+The right boundary is the host's own sandbox layer. On macOS, run OpenTanuki under a dedicated user account, lean on Full Disk Access prompts, App Sandbox / TCC, and per-app screen recording / accessibility grants to scope what it can touch. On Linux, use a separate user plus systemd unit hardening (`ProtectHome`, `ReadOnlyPaths`, `NoNewPrivileges`, namespaces). That gives Claude full reach into the things it needs while keeping the rest of the system off-limits — a cleaner trade than Docker for an agent whose whole job is to act on the machine it runs on.
+
+Or even better, grab a used Mac Mini, make that your tanuki's new home.
+
+Containers still make sense for the side services (Redis is already in `docker-compose.yml`); the Django + Celery + `claude` processes belong on the host.
+
 ## Auth
 
 Per-user isolation enforced at every query: `task__user=request.user`. Cross-user reads return 404. Tasks fan out into Celery beat as user-tagged `PeriodicTask` rows; runs inherit the task's user via FK.
