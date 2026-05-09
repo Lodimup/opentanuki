@@ -1,10 +1,10 @@
+import asyncio
 import json
-import time
 from pathlib import Path
 
-import redis
 from django.conf import settings
 from django.http import StreamingHttpResponse
+from redis import asyncio as aioredis
 
 from .models import Run
 from .runner import DONE_TOKEN, channel_for
@@ -101,26 +101,31 @@ def prettify_line(line: str) -> str:
     return s
 
 
-def stream_run(run_id: int, last_event_id: int = 0):
-    """Yield SSE for a run, deduped by line counter.
+def _read_log_file(log_path: Path) -> list[str]:
+    with open(log_path, "r") as f:
+        return f.readlines()
+
+
+async def stream_run(run_id, last_event_id: int = 0):
+    """Async generator yielding SSE for a run, deduped by line counter.
 
     - Replays log file from line `last_event_id` onward (handles reconnect).
     - Parses stream-json into readable form when possible.
     - Subscribes to pubsub for live tail; emits ids continuing from file end.
     """
-    run = Run.objects.get(pk=run_id)
+    run = await Run.objects.aget(pk=run_id)
     counter = 0
     log_path = Path(run.log_path) if run.log_path else None
     if log_path and log_path.exists():
-        with open(log_path, "r") as f:
-            for raw in f:
-                counter += 1
-                if counter <= last_event_id:
-                    continue
-                pretty = prettify_line(raw)
-                if pretty == "":
-                    continue
-                yield _format_sse(pretty, event="log", msg_id=counter)
+        lines = await asyncio.to_thread(_read_log_file, log_path)
+        for raw in lines:
+            counter += 1
+            if counter <= last_event_id:
+                continue
+            pretty = prettify_line(raw)
+            if pretty == "":
+                continue
+            yield _format_sse(pretty, event="log", msg_id=counter)
 
     if not run.is_active:
         yield _format_sse(
@@ -128,29 +133,31 @@ def stream_run(run_id: int, last_event_id: int = 0):
         )
         return
 
-    r = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
     pubsub = r.pubsub(ignore_subscribe_messages=True)
-    pubsub.subscribe(channel_for(run_id))
+    await pubsub.subscribe(channel_for(run_id))
 
     try:
-        last_ping = time.time()
+        loop = asyncio.get_event_loop()
+        last_ping = loop.time()
         while True:
-            msg = pubsub.get_message(timeout=1.0)
+            msg = await pubsub.get_message(timeout=1.0)
             if msg is None:
-                run.refresh_from_db()
+                await run.arefresh_from_db()
                 if not run.is_active:
                     counter += 1
                     yield _format_sse(
                         f"exit={run.exit_code} status={run.status}", event="done", msg_id=counter
                     )
                     return
-                if time.time() - last_ping > 15:
+                now = loop.time()
+                if now - last_ping > 15:
                     yield ": keepalive\n\n"
-                    last_ping = time.time()
+                    last_ping = now
                 continue
             data = msg.get("data", "")
             if data == DONE_TOKEN:
-                run.refresh_from_db()
+                await run.arefresh_from_db()
                 counter += 1
                 yield _format_sse(
                     f"exit={run.exit_code} status={run.status}", event="done", msg_id=counter
@@ -162,15 +169,19 @@ def stream_run(run_id: int, last_event_id: int = 0):
                     continue
                 counter += 1
                 yield _format_sse(pretty, event="log", msg_id=counter)
-            last_ping = time.time()
+            last_ping = loop.time()
     finally:
         try:
-            pubsub.close()
+            await pubsub.aclose()
+        except Exception:
+            pass
+        try:
+            await r.aclose()
         except Exception:
             pass
 
 
-def sse_response(run_id: int, last_event_id: int = 0) -> StreamingHttpResponse:
+def sse_response(run_id, last_event_id: int = 0) -> StreamingHttpResponse:
     resp = StreamingHttpResponse(
         stream_run(run_id, last_event_id), content_type="text/event-stream"
     )

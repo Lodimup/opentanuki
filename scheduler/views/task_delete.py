@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import aget_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 from ..models import Task
@@ -7,7 +7,8 @@ from ..models import Task
 
 @login_required
 @require_POST
-def task_delete(request, pk):
-    task = get_object_or_404(Task, pk=pk, user=request.user)
-    task.delete()
+async def task_delete(request, pk):
+    user = await request.auser()
+    task = await aget_object_or_404(Task, pk=pk, user=user)
+    await task.adelete()
     return redirect("dashboard")

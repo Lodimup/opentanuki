@@ -1,23 +1,20 @@
+import asyncio
 import os
 from pathlib import Path
 
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
+from ._helpers import arender
 
-@login_required
-@require_GET
-def dir_browse(request):
-    """Server-side directory browser. Returns HTML fragment for htmx."""
-    raw = request.GET.get("path") or os.path.expanduser("~")
+
+def _list_dirs(raw: str):
     try:
         p = Path(raw).expanduser().resolve()
     except Exception:
         p = Path(os.path.expanduser("~"))
     if not p.is_dir():
         p = p.parent if p.parent.is_dir() else Path(os.path.expanduser("~"))
-
     try:
         entries = sorted(
             [e for e in p.iterdir() if e.is_dir() and not e.name.startswith(".")],
@@ -25,9 +22,17 @@ def dir_browse(request):
         )
     except PermissionError:
         entries = []
-
     parent = p.parent if p.parent != p else None
-    return render(
+    return p, parent, entries
+
+
+@login_required
+@require_GET
+async def dir_browse(request):
+    """Server-side directory browser. Returns HTML fragment for htmx."""
+    raw = request.GET.get("path") or os.path.expanduser("~")
+    p, parent, entries = await asyncio.to_thread(_list_dirs, raw)
+    return await arender(
         request,
         "scheduler/_dir_browser.html",
         {"current": str(p), "parent": str(parent) if parent else "", "entries": entries},

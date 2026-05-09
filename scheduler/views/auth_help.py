@@ -1,7 +1,8 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+
+from ._helpers import arender
 
 
 @login_required
-def auth_help(request):
-    return render(request, "scheduler/auth_help.html")
+async def auth_help(request):
+    return await arender(request, "scheduler/auth_help.html")

@@ -1,6 +1,7 @@
 .PHONY: help install migrate redis web worker beat all test shell user clean
 
 PORT ?= 8888
+HOST ?= 127.0.0.1
 
 help:
 	@echo "Targets:"
@@ -28,7 +29,7 @@ user:
 	uv run python manage.py createsuperuser
 
 web:
-	uv run granian --interface asginl app.asgi:application --host 127.0.0.1 --port $(PORT) --reload
+	uv run granian --interface asginl app.asgi:application --host $(HOST) --port $(PORT) --reload
 
 worker:
 	uv run celery -A app worker -l info

@@ -1,10 +1,12 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import aget_object_or_404
 
 from ..models import Run
+from ._helpers import arender
 
 
 @login_required
-def run_status(request, pk):
-    run = get_object_or_404(Run.objects.select_related("task"), pk=pk, task__user=request.user)
-    return render(request, "scheduler/_run_status.html", {"run": run})
+async def run_status(request, pk):
+    user = await request.auser()
+    run = await aget_object_or_404(Run.objects.select_related("task"), pk=pk, task__user=user)
+    return await arender(request, "scheduler/_run_status.html", {"run": run})

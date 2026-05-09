@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from django.template.loader import render_to_string
 from ninja import Schema
 
 from ...models import Run, RunStatus
+from ...views._helpers import arender_to_string
 from ._router import router
 
 
@@ -13,19 +13,21 @@ class DashboardData(Schema):
 
 
 @router.get("", response=DashboardData)
-def get_dashboard(request):
-    active = list(
-        Run.objects.filter(
+async def get_dashboard(request):
+    user = await request.auser()
+    active = [
+        tid
+        async for tid in Run.objects.filter(
             status__in=[RunStatus.PENDING, RunStatus.RUNNING],
-            task__user=request.user,
+            task__user=user,
         )
         .values_list("task_id", flat=True)
         .distinct()
-    )
-    recent = list(
-        Run.objects.select_related("task").filter(task__user=request.user)[:24]
-    )
-    html = render_to_string(
+    ]
+    recent = [
+        r async for r in Run.objects.select_related("task").filter(task__user=user)[:24]
+    ]
+    html = await arender_to_string(
         "scheduler/_recent_runs_rows.html", {"recent": recent}, request=request
     )
     return {"active_task_ids": active, "recent_html": html}
