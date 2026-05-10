@@ -32,7 +32,7 @@ web:
 	uv run granian --interface asginl app.asgi:application --host $(HOST) --port $(PORT) --reload
 
 worker:
-	uv run celery -A app worker -l info
+	uv run celery -A app worker -l info --autoscale=24,0
 
 beat:
 	uv run celery -A app beat -l info -S django
