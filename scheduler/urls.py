@@ -9,6 +9,7 @@ urlpatterns = [
     path("tasks/<uuid:pk>/edit/", views.task_edit, name="task_edit"),
     path("tasks/<uuid:pk>/delete/", views.task_delete, name="task_delete"),
     path("tasks/<uuid:pk>/favorite/", views.task_favorite, name="task_favorite"),
+    path("tasks/<uuid:pk>/clear-session/", views.task_clear_session, name="task_clear_session"),
     path("runs/", views.runs_list, name="runs_list"),
     path("runs/<uuid:pk>/", views.run_detail, name="run_detail"),
     path("runs/<uuid:pk>/stream/", views.run_stream, name="run_stream"),

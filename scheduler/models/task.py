@@ -48,6 +48,17 @@ class Task(BaseUUID, BaseAutoDate):
     enabled = models.BooleanField(default=True)
     is_favorite = models.BooleanField(default=False)
 
+    continue_conversation = models.BooleanField(
+        default=False,
+        help_text="Resume the previous conversation each run via --resume <session_id>.",
+    )
+    claude_session_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Session ID used by --resume. Auto-captured from last run; can be set manually.",
+    )
+
     class Meta:
         ordering = ["-is_favorite", "-updated_at"]
 
@@ -76,6 +87,8 @@ class Task(BaseUUID, BaseAutoDate):
             argv += ["--dangerously-skip-permissions"]
         if self.max_budget_usd:
             argv += ["--max-budget-usd", self.max_budget_usd]
+        if self.continue_conversation and self.claude_session_id:
+            argv += ["--resume", self.claude_session_id]
         for tok in self._extra_arg_tokens():
             argv.append(tok)
         argv.append(self.prompt)

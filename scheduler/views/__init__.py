@@ -6,6 +6,7 @@ from .run_status import run_status
 from .run_stream import run_stream
 from .runs_list import runs_list
 from .settings_view import settings_view
+from .task_clear_session import task_clear_session
 from .task_delete import task_delete
 from .task_detail import task_detail
 from .task_edit import task_edit
@@ -21,6 +22,7 @@ __all__ = [
     "run_stream",
     "runs_list",
     "settings_view",
+    "task_clear_session",
     "task_delete",
     "task_detail",
     "task_edit",

@@ -89,6 +89,20 @@
             </div>
         {% include "scheduler/_card_end.html" %}
 
+        {% include "scheduler/_card_start.html" with title="Continue conversation" icon="messages-square" %}
+            <div class="space-y-4">
+                <label class="flex items-center gap-2 font-bold text-sm">
+                    {{ form.continue_conversation }} <span class="font-mono text-xs">--session-id (chain runs)</span>
+                    {% include "scheduler/_tt.html" with text="When ON, each run reuses the same Claude session ID so conversation history persists across runs. ID auto-generated on first run if blank. Clear ID to start fresh." %}
+                </label>
+                <div>
+                    {% include "scheduler/_label.html" with text="Session ID" tt="UUID v4 passed via --session-id. Leave blank for auto-generation on first run. Paste an existing UUID to chain into an existing session." %}
+                    {{ form.claude_session_id }}
+                    {% if form.claude_session_id.errors %}<div class="font-black text-xs mt-1 inline-flex items-center gap-1"><i data-lucide="alert-triangle" class="icon-sm"></i>{{ form.claude_session_id.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+        {% include "scheduler/_card_end.html" %}
+
         {% include "scheduler/_card_start.html" with title="Schedule" icon="calendar-clock" %}
             <div class="space-y-4">
                 <div class="grid sm:grid-cols-3 gap-4">

@@ -69,6 +69,29 @@
         </div>
     {% include "scheduler/_card_end.html" %}
 
+    {% include "scheduler/_card_start.html" with title="Continue conversation" icon="messages-square" %}
+        <div class="space-y-3 text-sm">
+            <div class="font-mono text-xs">
+                <span class="font-black">--resume:</span> {% if task.continue_conversation %}ON{% else %}off{% endif %}
+            </div>
+            <div>
+                <div class="font-black text-xs uppercase tracking-widest mb-1">Session ID</div>
+                {% if task.claude_session_id %}
+                <div class="flex items-center gap-2 flex-wrap">
+                    <code class="font-mono text-xs break-all" style="background: var(--paper); padding: 0.25rem 0.5rem; border: 2px solid var(--line);">{{ task.claude_session_id }}</code>
+                    <form method="post" action="{% url 'task_clear_session' task.pk %}" class="inline">
+                        {% csrf_token %}
+                        {% include "scheduler/_btn.html" with type="submit" label="Clear" icon="eraser" variant="secondary" size="sm" %}
+                    </form>
+                </div>
+                <div class="text-xs text-mute mt-1">Clearing starts a fresh session on next run.</div>
+                {% else %}
+                <div class="font-mono text-xs text-mute">— (fresh on next run)</div>
+                {% endif %}
+            </div>
+        </div>
+    {% include "scheduler/_card_end.html" %}
+
     {% include "scheduler/_card_start.html" with title="Schedule" icon="calendar-clock" %}
         <div class="space-y-3 text-sm font-mono">
             <div class="grid sm:grid-cols-3 gap-3">

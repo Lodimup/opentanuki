@@ -24,6 +24,8 @@ class TaskForm(forms.ModelForm):
             "interval_seconds",
             "cron_expr",
             "enabled",
+            "continue_conversation",
+            "claude_session_id",
         ]
         widgets = {
             "name": forms.TextInput(attrs={"class": "brut-input", "placeholder": "Daily code review"}),
@@ -65,6 +67,7 @@ class TaskForm(forms.ModelForm):
             "schedule_type": forms.Select(attrs={"class": "brut-input"}),
             "interval_seconds": forms.NumberInput(attrs={"class": "brut-input", "placeholder": "3600"}),
             "cron_expr": forms.TextInput(attrs={"class": "brut-input", "placeholder": "0 9 * * *"}),
+            "claude_session_id": forms.TextInput(attrs={"class": "brut-input font-mono", "placeholder": "auto-generated on first run"}),
         }
 
     def clean(self):

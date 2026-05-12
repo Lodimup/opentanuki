@@ -36,6 +36,18 @@ def _looks_like_auth_fail(text: str) -> bool:
     return any(p in low for p in AUTH_FAIL_PATTERNS)
 
 
+def _extract_session_id(line: str) -> str:
+    s = line.strip()
+    if not (s.startswith("{") and s.endswith("}")):
+        return ""
+    try:
+        obj = json.loads(s)
+    except (json.JSONDecodeError, ValueError):
+        return ""
+    sid = obj.get("session_id")
+    return sid if isinstance(sid, str) else ""
+
+
 def _redis() -> redis.Redis:
     return redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
 
@@ -85,6 +97,7 @@ def execute_run(run_id: int) -> None:
         env["ANTHROPIC_API_KEY"] = api_key
 
     auth_fail = False
+    session_id = ""
     try:
         proc = subprocess.Popen(
             argv,
@@ -103,6 +116,9 @@ def execute_run(run_id: int) -> None:
             r.publish(channel_for(run_id), line)
             if not auth_fail and _looks_like_auth_fail(line):
                 auth_fail = True
+            sid = _extract_session_id(line)
+            if sid:
+                session_id = sid
         proc.wait()
         exit_code = proc.returncode
     except FileNotFoundError as e:
@@ -123,6 +139,14 @@ def execute_run(run_id: int) -> None:
     run.status = RunStatus.SUCCESS if exit_code == 0 else RunStatus.FAILED
     run.auth_required = auth_fail and run.status == RunStatus.FAILED
     run.save()
+    if (
+        task.continue_conversation
+        and session_id
+        and run.status == RunStatus.SUCCESS
+        and session_id != task.claude_session_id
+    ):
+        task.claude_session_id = session_id
+        task.save(update_fields=["claude_session_id", "updated_at"])
     suffix = " auth_required=1" if run.auth_required else ""
     r.publish(channel_for(run_id), f"\n[opentanuki] exit={exit_code} status={run.status}{suffix}\n")
     r.publish(channel_for(run_id), DONE_TOKEN)
